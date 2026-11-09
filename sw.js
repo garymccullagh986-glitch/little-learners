@@ -1,4 +1,4 @@
-const CACHE = 'little-learners-v4';
+const CACHE = 'little-learners-v5';
 const SHELL = ['./', 'index.html', 'styles.css', 'app.js', 'plan.js', 'library.js', 'config.js', 'manifest.webmanifest',
   'icons/icon-192.png', 'icons/icon-512.png', 'icons/apple-touch-icon.png'];
 

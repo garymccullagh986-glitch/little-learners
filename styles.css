@@ -226,3 +226,11 @@ details.more>summary::-webkit-details-marker{display:none}
 .previewsheet .pg:last-child{border-bottom:0}
 .previewsheet .bingo{gap:8px}
 .previewsheet .mem img{max-width:100%}
+
+/* ages */
+.agecard{display:flex;gap:8px;flex-wrap:wrap;margin:0 0 10px}
+.agecard span{background:#fff;border-radius:999px;padding:6px 12px;font-weight:800;font-size:.82rem;box-shadow:0 1px 3px rgba(34,48,74,.08)}
+.dobform{display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap}
+.dobform label{display:flex;flex-direction:column;gap:4px;font-weight:800;font-size:.8rem}
+.dobform input{border:2px solid var(--line);border-radius:12px;padding:9px 10px;font:inherit;font-weight:700;background:#fff}
+.lib.dim{opacity:.55}

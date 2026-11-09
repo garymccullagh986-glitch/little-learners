@@ -45,6 +45,31 @@ const state = {
   user: null, denied: false, entries: [], checks: {}, settings: {}, customWeeks: [],
   tab: 'today', planWeek: null, filter: 'all', skill: null, openDays: new Set(), menu: null, pendingRender: false
 };
+/* ages: birth month/year ("YYYY-MM") lives in ll_settings, never in the code */
+const dobOf = k => ((state.settings.dob || {})[k]) || '';
+function ageMonths(ym, iso) {
+  if (!ym) return null;
+  const [y, m] = ym.split('-').map(Number), d = new Date((iso || todayISO()) + 'T12:00:00');
+  const n = (d.getFullYear() - y) * 12 + (d.getMonth() + 1 - m);
+  return n < 0 ? null : n;
+}
+const fmtAge = n => n == null ? '' : (n < 12 ? `${n}m` : (n % 12 ? `${Math.floor(n / 12)}y ${n % 12}m` : `${Math.floor(n / 12)}y`));
+function ageStr(e) {
+  const ks = e.who === 'both' ? ['evie', 'colbie'] : [e.who];
+  const parts = ks.map(k => { const n = ageMonths(dobOf(k), e.date); return n == null ? '' : `${KID[k]?.name} ${fmtAge(n)}`; }).filter(Boolean);
+  return parts.length ? ' · ' + parts.join(', ') : '';
+}
+const agesOf = a => a.ages || [4, 6]; // [min, max] in years; current content is written for 4 to 6
+function ageCard() {
+  const ne = ageMonths(dobOf('evie')), nc = ageMonths(dobOf('colbie'));
+  if (ne == null && nc == null) return '<div class="note blue small">Add the girls’ birth months in <b>More</b> to show ages in the journal.</div>';
+  let h = `<div class="agecard"><span>🌸 Evie ${fmtAge(ne)}</span><span>⭐ Colbie ${fmtAge(nc)}</span></div>`;
+  if (ne != null && ne < 60 && 60 - ne <= 12) {
+    const left = 60 - ne;
+    h += `<div class="note green small">🎂 Evie turns 5 in about ${left} month${left > 1 ? 's' : ''}. Compulsory school age starts the term after her 5th birthday. The “Home education in England” guide in More has the dates to check.</div>`;
+  }
+  return h;
+}
 const allWeeks = () => [...WEEKS, ...state.customWeeks];
 const wk = id => allWeeks().find(w => String(w.id) === String(id)) || WEEKS[0];
 const nextWeekOf = id => { const a = allWeeks(); const i = a.findIndex(w => String(w.id) === String(id)); return a[i + 1] || null; };
@@ -364,6 +389,7 @@ function viewToday() {
   const dow = new Date().getDay();
   const di = dow >= 1 && dow <= 5 ? dow - 1 : -1;
   let h = `<h1 class="h-page">Hi ${esc(first(state.user.name))} 👋</h1><div class="sub">${new Date().toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' })}</div>`;
+  h += ageCard();
   h += hero(w, `<button class="btn sm mt" data-a="newtheme">✨ Follow a new interest</button>`);
   if (di >= 0) {
     const day = w.days[di];
@@ -478,7 +504,7 @@ function entryCard(e) {
       <span class="row"><button class="heart ${e.fav ? 'on' : ''}" data-a="fav" data-id="${e.id}" aria-label="Favourite">❤️</button>
       <button class="x" data-a="editentry" data-id="${e.id}" aria-label="Edit">✏️</button><button class="x" data-a="delentry" data-id="${e.id}" aria-label="Delete">🗑️</button></span></div>
     <div class="fred mt" style="font-size:1.12rem">${esc(e.title)}</div>
-    <div class="tiny muted bold">${fmtDate(e.date)}${e.week ? ' · ' + esc(e.week) : ''}${e.day ? ' · ' + esc(e.day) : ''}${e.by ? ' · by ' + esc(e.by) : ''}</div>
+    <div class="tiny muted bold">${fmtDate(e.date)}${e.week ? ' · ' + esc(e.week) : ''}${e.day ? ' · ' + esc(e.day) : ''}${e.by ? ' · by ' + esc(e.by) : ''}${ageStr(e)}</div>
     ${reacts ? `<div class="mt" style="font-size:1.1rem">${reacts}</div>` : ''}
     ${sk ? `<div class="sk-line">${sk}</div>` : ''}
     ${e.best ? `<div class="q"><b>BEST BIT</b>${esc(e.best)}</div>` : ''}
@@ -526,6 +552,11 @@ function viewMore() {
   h += `<div class="small bold muted mt">Anytime sheets</div><div class="grid2 mt">
     ${pr('📚', 'Reading log', 'reading')}${pr('📊', 'Tally chart', 'tally')}
     ${pr('📖', 'Memory book: both', 'book', 'data-who="all"')}${pr('🌸', 'Memory book: Evie', 'book', 'data-who="evie"')}${pr('⭐', 'Memory book: Colbie', 'book', 'data-who="colbie"')}</div></div>`;
+  h += `<div class="card"><div class="fred mb" style="font-size:1.1rem">🎂 Birth months</div>
+    <p class="small muted bold mb">Used for ages in the journal and to match activities to age. Month and year only, stored privately in your Firebase, not in the app’s code.</p>
+    <form data-form="dob" class="dobform"><label>🌸 Evie<input name="evie" type="month" value="${esc(dobOf('evie'))}"></label>
+      <label>⭐ Colbie<input name="colbie" type="month" value="${esc(dobOf('colbie'))}"></label>
+      <button class="btn sm" type="submit">Save</button></form></div>`;
   h += GUIDE();
   h += `<div class="card"><div class="fred mb" style="font-size:1.1rem">Account</div>
     <p class="small muted bold mb">${backend.mode === 'local' ? 'Preview mode (this device only)' : 'Signed in as ' + esc(state.user.name) + (state.user.email ? ' (' + esc(state.user.email) + ')' : '')}</p>
@@ -661,7 +692,9 @@ function swapHtml() {
   const m = modal, w = wk(m.w), key = `s${m.d}_${m.s}`, cur = getSess(w, m.d, m.s);
   const swapped = !!((checkDoc(w.id).swaps || {})[key]);
   let list = LIB.filter(a => (m.theme === 'all' || a.theme === m.theme) && a.title !== cur.title);
-  list.sort((a, b) => (b.sub === cur.sub) - (a.sub === cur.sub));
+  const ne = ageMonths(dobOf('evie')), ey = ne == null ? null : Math.floor(ne / 12);
+  const suits = a => { const g = agesOf(a); return ey == null || (ey >= g[0] && ey <= g[1]); };
+  list.sort((a, b) => (suits(b) - suits(a)) || ((b.sub === cur.sub) - (a.sub === cur.sub)));
   const total = list.length; list = list.slice(0, 60);
   const label = id => (THEME_CHIPS.find(t => t.id === id) || {}).label || '';
   const chips = [{ id: 'all', label: 'All' }, ...THEME_CHIPS].map(t => `<button class="chip ${m.theme === t.id ? 'on' : ''}" data-a="swaptheme" data-v="${t.id}">${t.label}</button>`).join('');
@@ -670,7 +703,8 @@ function swapHtml() {
     <div class="body"><div class="chips">${chips}</div>
       ${list.map(a => {
         const [ic, col] = SUBJ[a.sub] || ['✨', '#444'];
-        return `<div class="lib"><div class="s-sub" style="color:${col}">${ic} ${a.sub} · ${a.min} min · ${label(a.theme)}</div><div class="s-title">${esc(a.title)}</div><div class="s-desc">${esc(a.desc)}</div>
+        const ag = agesOf(a);
+        return `<div class="lib ${suits(a) ? '' : 'dim'}"><div class="s-sub" style="color:${col}">${ic} ${a.sub} · ${a.min} min · ${label(a.theme)} · Ages ${ag[0]}–${ag[1]}${a.colbie ? ' · ⭐ Colbie version' : ''}</div><div class="s-title">${esc(a.title)}</div><div class="s-desc">${esc(a.desc)}</div>
           <button class="btn soft sm mt" data-a="swapuse" data-id="${a.id}">Use this one</button></div>`;
       }).join('') || '<div class="empty">No other ideas here yet.</div>'}
       ${total > 60 ? `<p class="tiny muted bold">Showing 60 of ${total}. Pick a theme to narrow it down.</p>` : ''}</div>
@@ -726,7 +760,7 @@ function pBook(who) {
   const title = who === 'all' ? 'Evie &amp; Colbie’s Learning Journal' : `${KID[who].name}’s Learning Journal`;
   if (!list.length) return `<div class="pg"><h1>${title}</h1><p class="ps">No entries yet.</p></div>`;
   return `<div class="pg"><h1>${title}</h1><div class="pm">${list.length} memories · ${fmtDate(list[0].date)} to ${fmtDate(list[list.length - 1].date)}</div>` +
-    list.map(e => `<div class="mem"><h2>${KID[e.who]?.e || ''} ${esc(e.title)}</h2><div class="pm">${fmtDate(e.date)}${e.week ? ' · ' + esc(e.week) : ''}</div>
+    list.map(e => `<div class="mem"><h2>${KID[e.who]?.e || ''} ${esc(e.title)}</h2><div class="pm">${fmtDate(e.date)}${e.week ? ' · ' + esc(e.week) : ''}${ageStr(e)}</div>
       ${e.best ? `<div class="ps"><b>Best bit:</b> ${esc(e.best)}</div>` : ''}${e.laugh ? `<div class="ps"><b>Made us laugh:</b> ${esc(e.laugh)}</div>` : ''}${e.notes ? `<div class="ps">${esc(e.notes)}</div>` : ''}
       ${(e.photos || []).map(p => `<img src="${p}" alt="">`).join('')}</div>`).join('') + '</div>';
 }
@@ -816,6 +850,15 @@ document.addEventListener('change', ev => {
   if (ev.target.dataset.change === 'photos') { addPhotos(ev.target.files); ev.target.value = ''; }
 });
 document.addEventListener('submit', ev => {
+  const df = ev.target.closest('[data-form="dob"]');
+  if (df) {
+    ev.preventDefault();
+    const dob = { evie: df.evie.value, colbie: df.colbie.value };
+    document.activeElement?.blur(); state.pendingRender = false;
+    state.settings.dob = dob; render();
+    backend.saveSettings({ dob }).catch(syncErr); toast('Saved 🎂');
+    return;
+  }
   const lf = ev.target.closest('[data-form="login"]');
   if (lf) {
     ev.preventDefault();

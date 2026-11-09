@@ -37,6 +37,7 @@ Two ways, both work together: **Google**, or **email and password** (Create acco
 - **Plan**: every week, every day, with a "For Colbie" version of each activity.
 - **Checklist**: this week's kit and next week's, ticked together and synced. Add your own items.
 - **Journal**: entries for Evie, Colbie or both, with photos, reactions and favourites. Tag the skills you noticed (communication, early literacy, numeracy, physical, independence, creativity). Filter to one girl to see her gentle skills card, then tap a skill to see those moments. Counts only, no levels, no comparison.
+- **Ages**: enter each girl's birth month in More. Ages then show on Today and on every journal entry and memory-book page (worked out from the entry date, so old entries update too). Swap suggestions sort by what suits Evie's age. Activities default to ages 4 to 6; for older content, give an activity `ages: [min, max]` in `library.js` or `plan.js` and it will be filtered automatically. Birth months are stored in Firestore (`ll_settings`), not in the code.
 - **More**: print plans, checklists, outing bingo, a reading log, a tally chart and a **Memory book**. JSON backup and the "Home education in England" guide.
 - Works offline (woods, farms). Entries and photos sync when you're back on signal.
 
